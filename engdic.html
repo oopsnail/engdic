@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>나만의 영어사전</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@400;500;700&family=Source+Serif+4:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F2F4F1;
+    --card: #FBFCFA;
+    --ink: #1B2333;
+    --muted: #5C6675;
+    --line: #D3D9D1;
+    --accent: #39548F;
+    --accent-ink: #FFFFFF;
+    --accent-soft: #DEE6F3;
+    --danger: #A33A3A;
+    --serif: "Source Serif 4", "Noto Serif KR", "Nanum Myeongjo", "Apple SD Gothic Neo", serif;
+    --sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141A1C; --card: #1B2326; --ink: #E6EAE7; --muted: #98A3A0;
+      --line: #2C3739; --accent: #8FA9DE; --accent-ink: #10172B;
+      --accent-soft: #212C45; --danger: #E07A7A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141A1C; --card: #1B2326; --ink: #E6EAE7; --muted: #98A3A0;
+    --line: #2C3739; --accent: #8FA9DE; --accent-ink: #10172B;
+    --accent-soft: #212C45; --danger: #E07A7A;
+  }
+
+  html { scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 64px); }
+  *, *::before, *::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 96px; }
+
+  header.top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: 30px; letter-spacing: -0.01em; margin: 0; }
+  .count { color: var(--muted); font-size: 14px; }
+  .head-right { display: flex; align-items: center; gap: 12px; }
+  .dl-panel {
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 16px; margin: -8px 0 20px; display: grid; gap: 10px; font-size: 14px;
+  }
+  .dl-panel[hidden] { display: none; }
+  .dl-panel p { margin: 0; color: var(--muted); }
+  #dl-msg { color: var(--muted); font-size: 13px; }
+
+  /* Form */
+  .entry-form {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 20px;
+    display: grid;
+    gap: 16px;
+  }
+  .entry-form.editing { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  input[type="text"], input[type="search"], textarea {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+  }
+  textarea { resize: vertical; min-height: 96px; line-height: 1.65; }
+  #f-word { font-family: var(--serif); font-size: 22px; font-weight: 600; padding: 8px 12px; }
+  #f-word, .word { font-style: normal; }
+  input::placeholder, textarea::placeholder { color: var(--muted); opacity: .8; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible { outline-offset: 0; border-color: var(--accent); }
+
+  .form-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .form-actions .hint { margin-left: auto; color: var(--muted); font-size: 13px; }
+  button {
+    font: inherit; font-size: 15px; font-weight: 500; cursor: pointer;
+    border-radius: 4px; padding: 9px 18px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink);
+  }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button.primary:hover { filter: brightness(1.08); }
+  button.small { padding: 4px 10px; font-size: 13px; }
+  button.danger.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .ac { position: relative; }
+  .ac-list {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 15;
+    margin: 0; padding: 4px; list-style: none; max-height: 248px; overflow-y: auto;
+    background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.14);
+  }
+  .ac-list[hidden] { display: none; }
+  .ac-list li { padding: 10px 12px; border-radius: 4px; cursor: pointer; overflow-wrap: anywhere; font-size: 15px; }
+  .ac-list li:hover, .ac-list li.active { background: var(--accent-soft); }
+  .ac-list .ac-head { padding: 6px 12px 2px; font-size: 12px; color: var(--muted); cursor: default; }
+  .ac-list .ac-head:hover { background: transparent; }
+  .error { color: var(--danger); font-size: 14px; min-height: 1em; }
+
+  /* Index + search */
+  .bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: var(--paper);
+    margin: 28px -20px 0; padding: 12px 20px;
+    border-bottom: 1px solid var(--line);
+    display: grid; gap: 10px;
+  }
+  .index { display: flex; flex-wrap: wrap; gap: 6px; }
+  .index a {
+    font-family: var(--serif); font-weight: 600; font-size: 16px;
+    min-width: 34px; height: 34px; padding: 0 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); border-radius: 4px;
+    color: var(--ink); text-decoration: none; background: var(--card);
+  }
+  .index a:hover { border-color: var(--accent); color: var(--accent); }
+  .index a.off { opacity: .35; pointer-events: none; }
+
+  /* Groups */
+  .group { margin-top: 36px; }
+  .group-head { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+  .group-head .glyph {
+    font-family: var(--serif); font-weight: 700; font-size: 44px; line-height: 1;
+    color: var(--accent); min-width: 44px;
+  }
+  .group-head .rule { flex: 1; height: 1px; background: var(--line); }
+  .group-head .n { color: var(--muted); font-size: 13px; }
+
+  .item { border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .word-btn {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    border: 0; border-radius: 0; background: transparent; text-align: left;
+    padding: 14px 4px; color: var(--ink);
+  }
+  .word-btn:hover { background: var(--accent-soft); }
+  .word-btn:hover .word { color: var(--accent); }
+  .word { font-family: var(--serif); font-weight: 700; font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+  .detail { padding: 0 4px 20px; }
+  .detail[hidden] { display: none; }
+  .detail .none { color: var(--muted); font-size: 14px; margin: 0; }
+  .tools { display: flex; gap: 6px; margin-top: 16px; }
+  .meaning { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 68ch; }
+  .sentence {
+    margin: 12px 0 0; padding: 4px 0 4px 14px;
+    border-left: 3px solid var(--accent);
+    font-family: var(--serif); color: var(--muted);
+    white-space: pre-wrap; overflow-wrap: anywhere; max-width: 66ch; line-height: 1.75;
+  }
+  .source { margin: 8px 0 0 17px; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; max-width: 66ch; }
+  .source.solo { margin-left: 0; }
+  mark { background: var(--accent-soft); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+  .empty { margin-top: 48px; padding: 32px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; }
+
+  /* Backup */
+  details.backup { margin-top: 56px; color: var(--muted); font-size: 14px; }
+  details.backup summary { cursor: pointer; }
+  details.backup .inner { margin-top: 12px; display: grid; gap: 10px; }
+  details.backup textarea { font-size: 13px; min-height: 120px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  @media (max-width: 520px) {
+    h1 { font-size: 25px; }
+    .word { font-size: 20px; }
+    .group-head .glyph { font-size: 38px; }
+    .form-actions .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>나만의 영어사전</h1>
+    <div class="head-right">
+      <span class="count" id="count"></span>
+      <button class="small" id="dl-toggle" aria-expanded="false" aria-controls="dl-panel">다운로드</button>
+    </div>
+  </header>
+
+  <div class="dl-panel" id="dl-panel" hidden>
+    <p>저장한 단어 전체를 알파벳 순으로 내려받아요.</p>
+    <div class="row">
+      <button id="dl-csv">엑셀용 (CSV)</button>
+      <button id="dl-json">백업용 (JSON)</button>
+      <span id="dl-msg" role="status"></span>
+    </div>
+  </div>
+
+  <div class="entry-form" id="form">
+    <div>
+      <label for="f-word">단어</label>
+      <input type="text" id="f-word" autocomplete="off" placeholder="예: ephemeral">
+    </div>
+    <div>
+      <label for="f-meaning">뜻</label>
+      <textarea id="f-meaning" placeholder="영어사전에서 복사한 뜻을 여기에 붙여넣기"></textarea>
+    </div>
+    <div>
+      <label for="f-sentence">이 단어를 찾은 문장</label>
+      <textarea id="f-sentence" placeholder="이 단어를 만난 영어 문장(원문)"></textarea>
+    </div>
+    <div>
+      <label for="f-source">출처</label>
+      <div class="ac">
+        <input type="text" id="f-source" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="src-list" aria-autocomplete="list" placeholder="예: The New York Times 기사 / 책 제목 p.52 / 웹사이트 주소">
+        <ul class="ac-list" id="src-list" role="listbox" hidden></ul>
+      </div>
+    </div>
+    <div class="error" id="err" role="alert"></div>
+    <div class="form-actions">
+      <button class="primary" id="save">단어 저장</button>
+      <button id="cancel" hidden>수정 취소</button>
+      <span class="hint">Ctrl + Enter로 저장</span>
+    </div>
+  </div>
+
+  <div class="bar">
+    <input type="search" id="q" placeholder="단어, 뜻, 문장, 출처에서 검색" aria-label="검색">
+    <nav class="index" id="index" aria-label="알파벳 색인"></nav>
+  </div>
+
+  <main id="list"></main>
+
+  <details class="backup">
+    <summary>백업 · 복원</summary>
+    <div class="inner">
+      <p style="margin:0">이 사전은 지금 쓰는 브라우저에만 저장돼요. 다른 기기로 옮기거나 안전하게 보관하려면 아래에서 내용을 복사해 두세요.</p>
+      <textarea id="backup-text" placeholder="내보내기를 누르면 여기에 내용이 나타나요. 복원할 때는 백업(JSON) 내용을 여기에 붙여넣으세요."></textarea>
+      <div class="row">
+        <button id="export">내보내기</button>
+        <button id="import">불러오기 (합치기)</button>
+        <span id="backup-msg"></span>
+      </div>
+    </div>
+  </details>
+</div>
+
+<script>
+(function () {
+  var KEY = "my-english-dictionary-v1";
+  var entries = [];
+  var editingId = null;
+  var collator = new Intl.Collator("en", { sensitivity: "base" });
+
+  var GROUPS = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","기타"];
+
+  function $(id) { return document.getElementById(id); }
+
+  function initial(word) {
+    var ch = word.trim().charAt(0).toUpperCase();
+    return (ch >= "A" && ch <= "Z") ? ch : "기타";
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        if (Array.isArray(data)) entries = data;
+      }
+    } catch (e) { entries = []; }
+  }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(entries)); }
+    catch (e) { setErr("이 브라우저에서는 저장할 수 없어요. 백업 기능으로 내용을 따로 보관해 주세요."); }
+  }
+
+  function setErr(msg) { $("err").textContent = msg || ""; }
+
+  function newId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+  function sorted(list) {
+    return list.slice().sort(function (a, b) {
+      var r = collator.compare(a.word, b.word);
+      return r !== 0 ? r : (a.created || 0) - (b.created || 0);
+    });
+  }
+
+  /* ---------- Form ---------- */
+  function resetForm() {
+    editingId = null;
+    $("f-word").value = ""; $("f-meaning").value = ""; $("f-sentence").value = ""; $("f-source").value = "";
+    acClose();
+    $("form").classList.remove("editing");
+    $("save").textContent = "단어 저장";
+    $("cancel").hidden = true;
+    setErr("");
+  }
+
+  function save() {
+    var word = $("f-word").value.trim();
+    var meaning = $("f-meaning").value.trim();
+    var sentence = $("f-sentence").value.trim();
+    var source = $("f-source").value.trim();
+    if (!word) { setErr("단어를 입력해 주세요."); $("f-word").focus(); return; }
+    setErr("");
+    if (editingId) {
+      for (var i = 0; i < entries.length; i++) {
+        if (entries[i].id === editingId) {
+          entries[i].word = word; entries[i].meaning = meaning; entries[i].sentence = sentence; entries[i].source = source;
+          entries[i].updated = Date.now();
+        }
+      }
+    } else {
+      entries.push({ id: newId(), word: word, meaning: meaning, sentence: sentence, source: source, created: Date.now() });
+    }
+    persist();
+    resetForm();
+    render();
+    $("f-word").focus();
+  }
+
+  function startEdit(id) {
+    var e = entries.filter(function (x) { return x.id === id; })[0];
+    if (!e) return;
+    editingId = id;
+    $("f-word").value = e.word; $("f-meaning").value = e.meaning || ""; $("f-sentence").value = e.sentence || ""; $("f-source").value = e.source || "";
+    $("form").classList.add("editing");
+    $("save").textContent = "수정 저장";
+    $("cancel").hidden = false;
+    $("form").scrollIntoView({ block: "start" });
+    $("f-word").focus();
+  }
+
+  /* ---------- Render ---------- */
+  function highlight(el, text, term) {
+    el.textContent = "";
+    if (!term) { el.textContent = text; return; }
+    var lower = text.toLowerCase(), t = term.toLowerCase(), pos = 0, idx;
+    while ((idx = lower.indexOf(t, pos)) > -1) {
+      if (idx > pos) el.appendChild(document.createTextNode(text.slice(pos, idx)));
+      var m = document.createElement("mark");
+      m.textContent = text.slice(idx, idx + t.length);
+      el.appendChild(m);
+      pos = idx + t.length;
+    }
+    if (pos < text.length) el.appendChild(document.createTextNode(text.slice(pos)));
+  }
+
+  var openState = {};
+
+  function makeItem(e, term) {
+    var item = document.createElement("article");
+    item.className = "item";
+
+    var open = (openState[e.id] !== undefined) ? openState[e.id] : !!term;
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "word-btn";
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    var h = document.createElement("h3");
+    h.className = "word";
+    highlight(h, e.word, term);
+    btn.appendChild(h);
+    item.appendChild(btn);
+
+    var detail = document.createElement("div");
+    detail.className = "detail";
+    detail.hidden = !open;
+
+    if (e.meaning) {
+      var p = document.createElement("p");
+      p.className = "meaning";
+      highlight(p, e.meaning, term);
+      detail.appendChild(p);
+    }
+    if (e.sentence) {
+      var s = document.createElement("p");
+      s.className = "sentence";
+      highlight(s, e.sentence, term);
+      detail.appendChild(s);
+    }
+    if (e.source) {
+      var src = document.createElement("p");
+      src.className = "source" + (e.sentence ? "" : " solo");
+      var wrap = document.createElement("span");
+      highlight(wrap, "출처: " + e.source, term);
+      src.appendChild(wrap);
+      detail.appendChild(src);
+    }
+    if (!e.meaning && !e.sentence && !e.source) {
+      var none = document.createElement("p");
+      none.className = "none";
+      none.textContent = "적어 둔 내용이 없어요. 수정에서 뜻이나 문장을 추가해 보세요.";
+      detail.appendChild(none);
+    }
+
+    var tools = document.createElement("div");
+    tools.className = "tools";
+    var edit = document.createElement("button");
+    edit.className = "small"; edit.textContent = "수정";
+    edit.addEventListener("click", function () { startEdit(e.id); });
+    var del = document.createElement("button");
+    del.className = "small danger"; del.textContent = "삭제";
+    del.addEventListener("click", function () {
+      if (del.classList.contains("armed")) {
+        entries = entries.filter(function (x) { return x.id !== e.id; });
+        delete openState[e.id];
+        if (editingId === e.id) resetForm();
+        persist(); render();
+      } else {
+        del.classList.add("armed"); del.textContent = "정말 삭제";
+        setTimeout(function () { del.classList.remove("armed"); del.textContent = "삭제"; }, 3000);
+      }
+    });
+    tools.appendChild(edit); tools.appendChild(del);
+    detail.appendChild(tools);
+    item.appendChild(detail);
+
+    btn.addEventListener("click", function () {
+      var nowOpen = detail.hidden; // hidden -> will open
+      detail.hidden = !nowOpen;
+      btn.setAttribute("aria-expanded", nowOpen ? "true" : "false");
+      openState[e.id] = nowOpen;
+    });
+    return item;
+  }
+
+  function render() {
+    var term = $("q").value.trim();
+    var t = term.toLowerCase();
+    var shown = entries.filter(function (e) {
+      if (!t) return true;
+      return (e.word + " " + (e.meaning || "") + " " + (e.sentence || "") + " " + (e.source || "")).toLowerCase().indexOf(t) > -1;
+    });
+    shown = sorted(shown);
+
+    $("count").textContent = entries.length ? "단어 " + entries.length + "개" : "";
+
+    var buckets = {};
+    GROUPS.forEach(function (g) { buckets[g] = []; });
+    shown.forEach(function (e) { buckets[initial(e.word)].push(e); });
+
+    // index
+    var idx = $("index");
+    idx.textContent = "";
+    GROUPS.forEach(function (g) {
+      var a = document.createElement("a");
+      a.textContent = g;
+      if (buckets[g].length) { a.href = "#g-" + GROUPS.indexOf(g); }
+      else { a.className = "off"; a.setAttribute("aria-disabled", "true"); }
+      idx.appendChild(a);
+    });
+
+    // list
+    var list = $("list");
+    list.textContent = "";
+    if (!shown.length) {
+      var empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = entries.length
+        ? "검색 결과가 없어요."
+        : "아직 저장한 단어가 없어요. 위에서 첫 영어 단어를 입력해 보세요. 저장한 단어는 클릭하면 뜻과 문장이 펼쳐져요.";
+      list.appendChild(empty);
+      return;
+    }
+    GROUPS.forEach(function (g, gi) {
+      var arr = buckets[g];
+      if (!arr.length) return;
+      var sec = document.createElement("section");
+      sec.className = "group";
+      sec.id = "g-" + gi;
+      var head = document.createElement("div");
+      head.className = "group-head";
+      var glyph = document.createElement("span");
+      glyph.className = "glyph"; glyph.textContent = g;
+      var rule = document.createElement("span"); rule.className = "rule";
+      var n = document.createElement("span"); n.className = "n"; n.textContent = arr.length + "개";
+      head.appendChild(glyph); head.appendChild(rule); head.appendChild(n);
+      sec.appendChild(head);
+      arr.forEach(function (e) { sec.appendChild(makeItem(e, term)); });
+      list.appendChild(sec);
+    });
+  }
+
+  /* ---------- Backup ---------- */
+  function backupMsg(m) { $("backup-msg").textContent = m; }
+  $("export").addEventListener("click", function () {
+    var ta = $("backup-text");
+    ta.value = JSON.stringify(sorted(entries), null, 2);
+    ta.focus(); ta.select();
+    backupMsg("내용을 전체 복사해서 메모장 등에 보관하세요.");
+  });
+  $("import").addEventListener("click", function () {
+    var raw = $("backup-text").value.trim();
+    if (!raw) { backupMsg("붙여넣은 내용이 없어요."); return; }
+    try {
+      var data = JSON.parse(raw);
+      if (!Array.isArray(data)) throw new Error("형식 오류");
+      var have = {};
+      entries.forEach(function (e) { have[e.id] = true; });
+      var added = 0;
+      data.forEach(function (d) {
+        if (d && typeof d.word === "string" && d.word.trim() && !have[d.id]) {
+          entries.push({
+            id: d.id || newId(), word: d.word.trim(),
+            meaning: typeof d.meaning === "string" ? d.meaning : "",
+            sentence: typeof d.sentence === "string" ? d.sentence : "",
+            source: typeof d.source === "string" ? d.source : "",
+            created: d.created || Date.now()
+          });
+          added++;
+        }
+      });
+      persist(); render();
+      backupMsg(added + "개를 추가했어요.");
+    } catch (e) {
+      backupMsg("내용을 읽을 수 없어요. 내보내기로 받은 내용 그대로 붙여넣었는지 확인해 주세요.");
+    }
+  });
+
+  /* ---------- Download ---------- */
+  function csvCell(v) {
+    v = String(v == null ? "" : v).replace(/\r?\n/g, "\n");
+    return '"' + v.replace(/"/g, '""') + '"';
+  }
+  function buildCsv() {
+    var rows = [["단어", "뜻", "문장", "출처"]];
+    sorted(entries).forEach(function (e) {
+      rows.push([e.word, e.meaning || "", e.sentence || "", e.source || ""]);
+    });
+    return "\uFEFF" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n");
+  }
+  function dlMsg(m) { $("dl-msg").textContent = m || ""; }
+
+  function saveFile(filename, data, mime) {
+    if (!entries.length) { dlMsg("저장된 단어가 아직 없어요."); return; }
+    try {
+      var blob = new Blob([data], { type: mime });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      dlMsg("저장했어요. 다운로드 폴더를 확인해 보세요.");
+    } catch (err) {
+      dlMsg("저장하지 못했어요. 아래 백업 · 복원으로 내용을 복사해 두세요.");
+    }
+  }
+
+  $("dl-csv").addEventListener("click", function () { saveFile("나만의 영어사전.csv", buildCsv(), "text/csv;charset=utf-8"); });
+  $("dl-json").addEventListener("click", function () {
+    saveFile("나만의 영어사전 백업.json", JSON.stringify(sorted(entries), null, 2), "application/json");
+  });
+  $("dl-toggle").addEventListener("click", function () {
+    var panel = $("dl-panel");
+    var open = panel.hidden;
+    panel.hidden = !open;
+    $("dl-toggle").setAttribute("aria-expanded", open ? "true" : "false");
+    dlMsg("");
+  });
+
+  /* ---------- 출처 자동완성 ---------- */
+  var acList = $("src-list"), acItems = [], acActive = -1;
+
+  function norm(t) { return String(t).toLowerCase().replace(/\s+/g, ""); }
+
+  function sourceHistory() {
+    var latest = {};
+    entries.forEach(function (e) {
+      var src = (e.source || "").trim();
+      if (!src) return;
+      var t = e.updated || e.created || 0;
+      if (latest[src] === undefined || latest[src] < t) latest[src] = t;
+    });
+    return Object.keys(latest).sort(function (a, b) { return latest[b] - latest[a]; });
+  }
+
+  function acMatches() {
+    var raw = $("f-source").value.trim();
+    var all = sourceHistory();
+    if (!raw) return { list: all.slice(0, 6), recent: true };
+    var q = norm(raw);
+    var contiguous = [], scattered = [];
+    all.forEach(function (src) {
+      var n = norm(src);
+      if (n === q) return;
+      if (n.indexOf(q) > -1) { contiguous.push(src); return; }
+      // 이어지지 않아도, 입력한 음절이 모두 들어 있으면 비슷한 것으로 봐요
+      var chars = q.split("");
+      var all_in = chars.length >= 2 && chars.every(function (c) { return n.indexOf(c) > -1; });
+      if (all_in) scattered.push(src);
+    });
+    return { list: contiguous.concat(scattered).slice(0, 6), recent: false };
+  }
+
+  function acClose() {
+    acList.hidden = true; acList.textContent = ""; acItems = []; acActive = -1;
+    $("f-source").setAttribute("aria-expanded", "false");
+  }
+
+  function acPick(src) {
+    $("f-source").value = src;
+    acClose();
+    $("f-source").focus();
+  }
+
+  function acSetActive(i) {
+    acActive = i;
+    acItems.forEach(function (li, k) { li.classList.toggle("active", k === i); });
+    if (acItems[i]) acItems[i].scrollIntoView({ block: "nearest" });
+  }
+
+  function acRender() {
+    var r = acMatches();
+    acList.textContent = "";
+    acItems = []; acActive = -1;
+    if (!r.list.length) { acList.hidden = true; $("f-source").setAttribute("aria-expanded", "false"); return; }
+    if (r.recent) {
+      var head = document.createElement("li");
+      head.className = "ac-head"; head.setAttribute("role", "presentation");
+      head.textContent = "최근 쓴 출처";
+      acList.appendChild(head);
+    }
+    r.list.forEach(function (src) {
+      var li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.textContent = src;
+      li.addEventListener("mousedown", function (ev) { ev.preventDefault(); }); // 입력칸이 포커스를 잃지 않게
+      li.addEventListener("click", function () { acPick(src); });
+      acList.appendChild(li);
+      acItems.push(li);
+    });
+    acList.hidden = false;
+    $("f-source").setAttribute("aria-expanded", "true");
+  }
+
+  $("f-source").addEventListener("input", acRender);
+  $("f-source").addEventListener("focus", acRender);
+  $("f-source").addEventListener("blur", function () { setTimeout(acClose, 120); });
+  $("f-source").addEventListener("keydown", function (e) {
+    if (acList.hidden) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); acSetActive((acActive + 1) % acItems.length); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); acSetActive((acActive - 1 + acItems.length) % acItems.length); }
+    else if (e.key === "Escape") { acClose(); }
+    else if (e.key === "Enter" && acActive >= 0) {
+      e.preventDefault(); e.stopImmediatePropagation();
+      acPick(acItems[acActive].textContent);
+    }
+  });
+
+  /* ---------- Events ---------- */
+  $("save").addEventListener("click", save);
+  $("cancel").addEventListener("click", resetForm);
+  $("q").addEventListener("input", render);
+  $("f-source").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); save(); }
+  });
+  $("f-word").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); $("f-meaning").focus(); }
+  });
+  ["f-meaning", "f-sentence", "f-source"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); save(); }
+    });
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>
